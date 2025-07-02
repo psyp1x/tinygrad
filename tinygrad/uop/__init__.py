@@ -30,7 +30,7 @@ class Ops(FastEnum):
   # TODO: remove VALID with the VIEW(CONST(DEVICE)) refactor
   VALID = auto()
 
-  # TODO: unify these ops into the levels of the memory hierarchy. depends on ASSIGN is STORE
+  # TODO: unify these ops into the levels of the memory hierarchy
   DEFINE_GLOBAL = auto(); DEFINE_LOCAL = auto(); DEFINE_REG = auto() # noqa: E702
 
   # this is for symbolic shapes
@@ -50,7 +50,6 @@ class Ops(FastEnum):
 
   # load/store before math
   LOAD = auto(); STORE = auto() # noqa: E702
-  ASSIGN = auto()  # TODO: ASSIGN is STORE, remove ASSIGN
 
   # tensor core math op, not elementwise
   WMMA = auto()
