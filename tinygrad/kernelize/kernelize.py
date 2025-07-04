@@ -256,8 +256,6 @@ add_buffer_ops = PatternMatcher([
   (UPat(Ops.SINK, src=(UPat(GroupOp.Meta, name="x"),)), lambda x:x),
   (UPat(Ops.SINK, src=UPat(GroupOp.All-{Ops.STORE}), name="sink"), lambda ctx,sink:
    UOp.sink(*[UOp.store(UOp(Ops.DEFINE_GLOBAL, (s:=x.base).dtype.ptr(ctx[i].size), (), i).view(s.st), s) for i,x in enumerate(sink.src)])),
-  # passthrough STORE
-  (UPat(Ops.STORE, name="x"), lambda x: x.src[1]),
   # VALID
   (UPat(Ops.VIEW, src=(UPat.cvar(),), name="self"), UOp.valid),
 ])
