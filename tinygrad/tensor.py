@@ -1309,11 +1309,30 @@ class Tensor(MathTrait):
     ```
     """
     dim = self._resolve_dim(dim)
-    for arg in args: assert arg.ndim==self.ndim and all(ti==ai for i,(ti,ai) in enumerate(zip(self.shape, arg.shape)) if i!=dim)
+    for arg in args: assert arg.ndim == self.ndim and all(ti == ai for i,(ti,ai) in enumerate(zip(self.shape, arg.shape)) if i != dim)
     tensors = [self, *args]
-    dim_cumsum = list(itertools.accumulate([t.shape[dim] for t in tensors], initial=0))
-    for i,t in enumerate(tensors): tensors[i] = t.pad([(dim_cumsum[i], dim_cumsum[-1]-dim_cumsum[i+1]) if j==dim else None for j in range(t.ndim)])
-    return functools.reduce(Tensor.add, tensors)
+
+    def _cat_impl(ts: list[Tensor]) -> Tensor:
+      dim_cumsum = list(itertools.accumulate([t.shape[dim] for t in ts], initial=0))
+      for i,t in enumerate(ts):
+        ts[i] = t.pad([(dim_cumsum[i], dim_cumsum[-1]-dim_cumsum[i+1]) if j == dim else None for j in range(t.ndim)])
+      return functools.reduce(Tensor.add, ts)
+
+    if all_int([t.shape[dim] for t in tensors]):
+      SPLIT = 256
+      if sum(t.shape[dim] for t in tensors) > SPLIT:
+        out, cur, sz = [], [], 0
+        for t in tensors:
+          if sz and sz + t.shape[dim] > SPLIT:
+            out.append(_cat_impl(cur))
+            cur, sz = [], 0
+          cur.append(t)
+          sz += t.shape[dim]
+        if cur:
+          out.append(_cat_impl(cur))
+        return Tensor.cat(*out, dim=dim) if len(out) > 1 else out[0]
+
+    return _cat_impl(tensors)
 
   def stack(self:Tensor, *args:Tensor, dim:int=0) -> Tensor:
     """
