@@ -2357,9 +2357,12 @@ class Tensor(MathTrait):
     noop, i_ = [None] * (self.ndim-len(k_)), self.shape[-len(k_):]
     assert all(resolve(d*(k-1)+1 <= i) for k,d,i in zip(k_,d_,i_)), "kernel size cannot be greater than actual input size"
     o_ = [ceildiv(i-d*(k-1), s) for i,d,k,s in zip(i_,d_,k_,s_)]
-    # input size scaling factor to make sure shrink for stride is possible
-    # ensure length after dilation stage (i*f + d) is at least o*s
-    f_ = [max(1, ceildiv(o*s - d, i)) for o,s,i,d in zip(o_,s_,i_,d_)]
+    # input size scaling factor to make sure shrink for stride is possible and slicing to o*s is valid
+    # ensure i*f + d >= o*s so that the subsequent shrink((0,k), (0,o*s)) is always valid, even when s >> i
+    # NOTE: keep this arithmetic-only (no boolean casts) to support symbolic backends
+    # avoid MAX op in index space: compute max(need, 1) using (a+b+|a-b|)//2
+    need_:list[sint] = [ceildiv(o*s - d, i) for o,s,i,d in zip(o_,s_,i_,d_)]
+    f_ = [((n + 1 + abs(n - 1)) // 2) for n in need_]
     # repeats such that we don't need padding
     x = self.repeat([1]*len(noop) + [ceildiv(k*(i*f+d),i) for k,i,d,f in zip(k_,i_,d_,f_)])
     # handle dilation
